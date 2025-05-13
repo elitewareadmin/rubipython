@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import WaveSurfer from 'wavesurfer.js';
 import { supabase } from '../lib/supabase';
+import { MicrophoneIcon, StopIcon } from '@heroicons/react/24/outline';
 
 interface RubiDeviceProps {
   onMessage: (message: string) => void;
@@ -12,6 +13,7 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
+  const [processing, setProcessing] = useState(false);
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer>();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -47,6 +49,7 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
       };
 
       mediaRecorderRef.current.onstop = async () => {
+        setProcessing(true);
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const audioUrl = URL.createObjectURL(audioBlob);
         setAudioUrl(audioUrl);
@@ -55,27 +58,39 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
           wavesurferRef.current.load(audioUrl);
         }
 
-        // Upload to Supabase
-        const fileName = `voice_${Date.now()}.webm`;
-        const { data, error } = await supabase.storage
-          .from('voice-commands')
-          .upload(fileName, audioBlob);
+        try {
+          // Upload to Supabase Storage
+          const fileName = `voice_${Date.now()}.webm`;
+          const { data, error } = await supabase.storage
+            .from('voice-commands')
+            .upload(`public/${fileName}`, audioBlob);
 
-        if (error) {
-          console.error('Error uploading voice command:', error);
-          return;
+          if (error) throw error;
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('voice-commands')
+            .getPublicUrl(`public/${fileName}`);
+
+          // Process voice command
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-voice`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ audioUrl: publicUrl }),
+          });
+
+          const result = await response.json();
+          setTranscript(result.transcript);
+          onVoiceCommand(result.transcript);
+        } catch (error) {
+          console.error('Error processing voice command:', error);
+          setTranscript('Error processing voice command. Please try again.');
+        } finally {
+          setProcessing(false);
         }
-
-        // Process voice command
-        const response = await fetch('/api/process-voice', {
-          method: 'POST',
-          body: JSON.stringify({ audioUrl: data.path }),
-          headers: { 'Content-Type': 'application/json' },
-        });
-
-        const { transcript } = await response.json();
-        setTranscript(transcript);
-        onVoiceCommand(transcript);
       };
 
       mediaRecorderRef.current.start();
@@ -99,9 +114,27 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
       className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg"
     >
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Rubi Assistant
-        </h2>
+        <div className="flex items-center gap-4">
+          <motion.div
+            animate={isListening ? { scale: [1, 1.2, 1] } : {}}
+            transition={{ repeat: Infinity, duration: 1 }}
+            className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center"
+          >
+            {isListening ? (
+              <StopIcon className="w-6 h-6 text-white" />
+            ) : (
+              <MicrophoneIcon className="w-6 h-6 text-white" />
+            )}
+          </motion.div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Rubi Assistant
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {isListening ? 'Listening...' : 'Click to start'}
+            </p>
+          </div>
+        </div>
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={isListening ? stopListening : startListening}
@@ -111,22 +144,22 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
               : 'bg-blue-500 text-white'
           }`}
         >
-          {isListening ? 'Stop Listening' : 'Start Listening'}
+          {isListening ? 'Stop' : 'Start'}
         </motion.button>
       </div>
 
       <div className="space-y-4">
-        {isListening && (
+        <div ref={waveformRef} className="w-full" />
+
+        {processing && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center text-gray-600 dark:text-gray-300"
           >
-            Listening...
+            Processing voice command...
           </motion.div>
         )}
-
-        <div ref={waveformRef} className="w-full" />
 
         {transcript && (
           <motion.div
