@@ -12,6 +12,7 @@ interface RubiDeviceProps {
 export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProps) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [response, setResponse] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [processing, setProcessing] = useState(false);
   const waveformRef = useRef<HTMLDivElement>(null);
@@ -37,6 +38,25 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
       wavesurferRef.current?.destroy();
     };
   }, []);
+
+  const processWithLlama = async (text: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/llama`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: text }),
+      });
+
+      const data = await response.json();
+      return data.response;
+    } catch (error) {
+      console.error('Error calling Llama:', error);
+      return 'Sorry, I encountered an error processing your request.';
+    }
+  };
 
   const startListening = async () => {
     try {
@@ -85,6 +105,11 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
           const result = await response.json();
           setTranscript(result.transcript);
           onVoiceCommand(result.transcript);
+
+          // Process with Llama
+          const llamaResponse = await processWithLlama(result.transcript);
+          setResponse(llamaResponse);
+
         } catch (error) {
           console.error('Error processing voice command:', error);
           setTranscript('Error processing voice command. Please try again.');
@@ -168,9 +193,22 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
             className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg"
           >
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-              Transcript
+              You said:
             </h3>
             <p className="text-gray-900 dark:text-white">{transcript}</p>
+          </motion.div>
+        )}
+
+        {response && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg"
+          >
+            <h3 className="text-sm font-medium text-blue-500 dark:text-blue-400 mb-2">
+              Rubi's response:
+            </h3>
+            <p className="text-gray-900 dark:text-white">{response}</p>
           </motion.div>
         )}
 
