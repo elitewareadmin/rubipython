@@ -1,17 +1,11 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { supabase } from './lib/supabase.ts';
-import Auth from './components/Auth.tsx';
-import Chat from './components/Chat.tsx';
-import DocumentUpload from './components/DocumentUpload.tsx';
-
-interface Session {
-  user: {
-    id: string;
-    email: string;
-  };
-}
+import { supabase } from './lib/supabase';
+import Auth from './components/Auth';
+import Chat from './components/Chat';
+import DocumentUpload from './components/DocumentUpload';
+import { Session } from '@supabase/supabase-js';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
