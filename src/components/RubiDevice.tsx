@@ -15,6 +15,7 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
   const [response, setResponse] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [provider, setProvider] = useState<'groq' | 'llama'>('groq');
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer>();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -39,7 +40,7 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
     };
   }, []);
 
-  const processWithLlama = async (text: string) => {
+  const processWithAI = async (text: string) => {
     try {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/llama`, {
         method: 'POST',
@@ -47,13 +48,16 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: text }),
+        body: JSON.stringify({ 
+          prompt: text,
+          provider 
+        }),
       });
 
       const data = await response.json();
       return data.response;
     } catch (error) {
-      console.error('Error calling Llama:', error);
+      console.error('Error calling AI:', error);
       return 'Sorry, I encountered an error processing your request.';
     }
   };
@@ -106,9 +110,9 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
           setTranscript(result.transcript);
           onVoiceCommand(result.transcript);
 
-          // Process with Llama
-          const llamaResponse = await processWithLlama(result.transcript);
-          setResponse(llamaResponse);
+          // Process with AI
+          const aiResponse = await processWithAI(result.transcript);
+          setResponse(aiResponse);
 
         } catch (error) {
           console.error('Error processing voice command:', error);
@@ -160,17 +164,27 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
             </p>
           </div>
         </div>
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={isListening ? stopListening : startListening}
-          className={`px-6 py-3 rounded-full font-medium ${
-            isListening
-              ? 'bg-red-500 text-white'
-              : 'bg-blue-500 text-white'
-          }`}
-        >
-          {isListening ? 'Stop' : 'Start'}
-        </motion.button>
+        <div className="flex items-center gap-4">
+          <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as 'groq' | 'llama')}
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          >
+            <option value="groq">Groq</option>
+            <option value="llama">Llama</option>
+          </select>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={isListening ? stopListening : startListening}
+            className={`px-6 py-3 rounded-full font-medium ${
+              isListening
+                ? 'bg-red-500 text-white'
+                : 'bg-blue-500 text-white'
+            }`}
+          >
+            {isListening ? 'Stop' : 'Start'}
+          </motion.button>
+        </div>
       </div>
 
       <div className="space-y-4">
