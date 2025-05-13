@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
-import { PhotoIcon, PaperClipIcon, PaperAirplaneIcon, EmojiHappyIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, PaperClipIcon, PaperAirplaneIcon, FaceSmileIcon } from '@heroicons/react/24/outline';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import RichMessage from './RichMessage';
@@ -380,7 +380,7 @@ export default function Chat() {
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <EmojiHappyIcon className="w-6 h-6" />
+              <FaceSmileIcon className="w-6 h-6" />
             </button>
             <div className="relative flex-1">
               <input
