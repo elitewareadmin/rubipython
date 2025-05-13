@@ -5,6 +5,7 @@ import Auth from './components/Auth';
 import Chat from './components/Chat';
 import WeatherWidget from './components/WeatherWidget';
 import TouristGuide from './components/TouristGuide';
+import RubiDevice from './components/RubiDevice';
 
 function App() {
   const [session, setSession] = useState(null);
@@ -23,6 +24,11 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const handleVoiceCommand = (command: string) => {
+    // Process voice commands and trigger appropriate actions
+    console.log('Voice command received:', command);
+  };
+
   return (
     <>
       <Toaster position="top-right" />
@@ -33,7 +39,7 @@ function App() {
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Dashboard
+                Rubi Platform
               </h1>
               <button
                 onClick={() => supabase.auth.signOut()}
@@ -44,7 +50,11 @@ function App() {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-3 space-y-8">
+                <RubiDevice
+                  onMessage={(msg) => console.log('Message:', msg)}
+                  onVoiceCommand={handleVoiceCommand}
+                />
                 <Chat />
               </div>
               <div className="space-y-8">

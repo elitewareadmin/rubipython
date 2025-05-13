@@ -1,5 +1,5 @@
 {
-  "name": "task-manager",
+  "name": "rubi-platform",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -27,7 +27,10 @@
     "react-syntax-highlighter": "^15.5.0",
     "react-use-voice-recorder": "^1.0.4",
     "regenerator-runtime": "^0.14.1",
-    "remark-gfm": "^4.0.0"
+    "remark-gfm": "^4.0.0",
+    "socket.io-client": "^4.7.4",
+    "wavesurfer.js": "^7.6.5",
+    "webrtc-adapter": "^8.2.3"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.8",
