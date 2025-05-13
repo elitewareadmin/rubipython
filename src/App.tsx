@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { supabase } from './lib/supabase';
 import Auth from './components/Auth';
 import Chat from './components/Chat';
+import DocumentUpload from './components/DocumentUpload';
 
 function App() {
   const [session, setSession] = useState(null);
@@ -28,9 +29,9 @@ function App() {
         <Auth />
       ) : (
         <div className="min-h-screen bg-gray-50 p-8">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">Chat</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
               <button
                 onClick={() => supabase.auth.signOut()}
                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
@@ -38,7 +39,10 @@ function App() {
                 Sign Out
               </button>
             </div>
-            <Chat />
+            <div className="grid gap-8">
+              <DocumentUpload />
+              <Chat />
+            </div>
           </div>
         </div>
       )}
