@@ -26,7 +26,6 @@ export default function VoiceMessage({ onRecordingComplete }: VoiceMessageProps)
     setIsRecording(true);
     startRecording();
     
-    // Start timer
     timerRef.current = setInterval(() => {
       setRecordingTime((prev) => prev + 1);
     }, 1000);
