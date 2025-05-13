@@ -1,15 +1,20 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { supabase } from './lib/supabase';
-import Auth from './components/Auth';
-import Chat from './components/Chat';
-import WeatherWidget from './components/WeatherWidget';
-import TouristGuide from './components/TouristGuide';
-import RubiDevice from './components/RubiDevice';
+import { supabase } from './lib/supabase.ts';
+import Auth from './components/Auth.tsx';
+import Chat from './components/Chat.tsx';
+import DocumentUpload from './components/DocumentUpload.tsx';
+
+interface Session {
+  user: {
+    id: string;
+    email: string;
+  };
+}
 
 function App() {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -18,17 +23,12 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
       setSession(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const handleVoiceCommand = (command: string) => {
-    // Process voice commands and trigger appropriate actions
-    console.log('Voice command received:', command);
-  };
 
   return (
     <>
@@ -36,12 +36,10 @@ function App() {
       {!session ? (
         <Auth />
       ) : (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
+        <div className="min-h-screen bg-gray-50 p-8">
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Rubi Platform
-              </h1>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
               <button
                 onClick={() => supabase.auth.signOut()}
                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
@@ -49,19 +47,9 @@ function App() {
                 Sign Out
               </button>
             </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-              <div className="lg:col-span-3 space-y-8">
-                <RubiDevice
-                  onMessage={(msg) => console.log('Message:', msg)}
-                  onVoiceCommand={handleVoiceCommand}
-                />
-                <Chat />
-              </div>
-              <div className="space-y-8">
-                <WeatherWidget />
-                <TouristGuide />
-              </div>
+            <div className="grid gap-8">
+              <DocumentUpload />
+              <Chat />
             </div>
           </div>
         </div>
