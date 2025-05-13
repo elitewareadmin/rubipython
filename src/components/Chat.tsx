@@ -2,9 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
 import { Session } from '@supabase/supabase-js';
-import { PhotoIcon, PaperClipIcon, PaperAirplaneIcon, FaceSmileIcon } from '@heroicons/react/24/outline';
-import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
 import RichMessage from './RichMessage';
 
 interface Message {
@@ -38,7 +35,6 @@ export default function Chat() {
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [rooms, setRooms] = useState<any[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -221,7 +217,6 @@ export default function Chat() {
 
     setNewMessage('');
     handleTyping(false);
-    setShowEmojiPicker(false);
   };
 
   return (
@@ -280,52 +275,13 @@ export default function Chat() {
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
                     }`}
                   >
-                    {message.file_url ? (
-                      message.file_type?.startsWith('audio/') ? (
-                        <audio
-                          controls
-                          className="max-w-full"
-                          src={message.file_url}
-                        >
-                          Your browser does not support the audio element.
-                        </audio>
-                      ) : message.file_type?.startsWith('image/') ? (
-                        <img
-                          src={message.file_url}
-                          alt="shared"
-                          className="max-w-full rounded-lg"
-                        />
-                      ) : (
-                        <a
-                          href={message.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline"
-                        >
-                          <PaperClipIcon className="w-5 h-5" />
-                          Download file
-                        </a>
-                      )
-                    ) : (
-                      <RichMessage
-                        content={message.content}
-                        onReaction={(emoji) => handleReaction(message.id, emoji)}
-                      />
-                    )}
+                    <RichMessage
+                      content={message.content}
+                      onReaction={(emoji) => handleReaction(message.id, emoji)}
+                    />
                   </div>
-                  <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                    <span>{format(new Date(message.created_at), 'HH:mm')}</span>
-                    <div className="flex gap-1">
-                      {['👍', '❤️', '😄', '😢', '😠'].map(reaction => (
-                        <button
-                          key={reaction}
-                          onClick={() => handleReaction(message.id, reaction)}
-                          className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1"
-                        >
-                          {reaction}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {format(new Date(message.created_at), 'HH:mm')}
                   </div>
                   <div className="flex gap-1 mt-1">
                     {reactions
@@ -354,13 +310,6 @@ export default function Chat() {
 
         <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              <PhotoIcon className="w-6 h-6" />
-            </button>
             <input
               type="file"
               ref={fileInputRef}
@@ -368,42 +317,22 @@ export default function Chat() {
               className="hidden"
               accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
             />
-            <button
-              type="button"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              <FaceSmileIcon className="w-6 h-6" />
-            </button>
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  handleTyping(e.target.value.length > 0);
-                }}
-                placeholder="Type a message..."
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {showEmojiPicker && (
-                <div className="absolute bottom-full right-0 mb-2">
-                  <Picker
-                    data={data}
-                    onEmojiSelect={(emoji: any) => {
-                      setNewMessage(prev => prev + emoji.native);
-                      setShowEmojiPicker(false);
-                    }}
-                  />
-                </div>
-              )}
-            </div>
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                handleTyping(e.target.value.length > 0);
+              }}
+              placeholder="Type a message..."
+              className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
             <button
               type="submit"
               disabled={!newMessage.trim() && !fileInputRef.current?.files?.length}
               className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <PaperAirplaneIcon className="w-6 h-6" />
+              Send
             </button>
           </div>
         </form>
