@@ -30,7 +30,6 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
         cursorColor: '#4F46E5',
         barWidth: 2,
         barRadius: 3,
-        responsive: true,
         height: 60,
       });
     }
