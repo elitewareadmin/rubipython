@@ -5,11 +5,10 @@ import { supabase } from '../lib/supabase';
 import { MicrophoneIcon, StopIcon } from '@heroicons/react/24/outline';
 
 interface RubiDeviceProps {
-  onMessage: (message: string) => void;
   onVoiceCommand: (command: string) => void;
 }
 
-export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProps) {
+export default function RubiDevice({ onVoiceCommand }: RubiDeviceProps) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [response, setResponse] = useState('');
@@ -31,6 +30,7 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
         barWidth: 2,
         barRadius: 3,
         height: 60,
+        // ✅ propiedad 'responsive' eliminada
       });
     }
 
@@ -47,10 +47,7 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          prompt: text,
-          provider 
-        }),
+        body: JSON.stringify({ prompt: text, provider }),
       });
 
       const data = await response.json();
@@ -76,26 +73,23 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const audioUrl = URL.createObjectURL(audioBlob);
         setAudioUrl(audioUrl);
-        
+
         if (wavesurferRef.current) {
           wavesurferRef.current.load(audioUrl);
         }
 
         try {
-          // Upload to Supabase Storage
           const fileName = `voice_${Date.now()}.webm`;
-          const { data, error } = await supabase.storage
+          const { error } = await supabase.storage
             .from('voice-commands')
             .upload(`public/${fileName}`, audioBlob);
 
           if (error) throw error;
 
-          // Get public URL
           const { data: { publicUrl } } = supabase.storage
             .from('voice-commands')
             .getPublicUrl(`public/${fileName}`);
 
-          // Process voice command
           const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-voice`, {
             method: 'POST',
             headers: {
@@ -109,7 +103,6 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
           setTranscript(result.transcript);
           onVoiceCommand(result.transcript);
 
-          // Process with AI
           const aiResponse = await processWithAI(result.transcript);
           setResponse(aiResponse);
 
@@ -176,10 +169,8 @@ export default function RubiDevice({ onMessage, onVoiceCommand }: RubiDeviceProp
             whileTap={{ scale: 0.95 }}
             onClick={isListening ? stopListening : startListening}
             className={`px-6 py-3 rounded-full font-medium ${
-              isListening
-                ? 'bg-red-500 text-white'
-                : 'bg-blue-500 text-white'
-            }`}
+              isListening ? 'bg-red-500' : 'bg-blue-500'
+            } text-white`}
           >
             {isListening ? 'Stop' : 'Start'}
           </motion.button>
