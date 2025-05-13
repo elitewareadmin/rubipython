@@ -13,7 +13,7 @@
     - Add cleanup trigger for typing status
 */
 
--- Create voice_prints table
+-- Create voice_prints table if not exists
 CREATE TABLE IF NOT EXISTS voice_prints (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users ON DELETE CASCADE,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS voice_prints (
   created_at timestamptz DEFAULT now()
 );
 
--- Create ai_completions table
+-- Create ai_completions table if not exists
 CREATE TABLE IF NOT EXISTS ai_completions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users ON DELETE CASCADE,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS ai_completions (
   created_at timestamptz DEFAULT now()
 );
 
--- Create chat_typing table
+-- Create chat_typing table if not exists
 CREATE TABLE IF NOT EXISTS chat_typing (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users ON DELETE CASCADE,
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS chat_typing (
   last_updated timestamptz DEFAULT now()
 );
 
--- Create chat_settings table
+-- Create chat_settings table if not exists
 CREATE TABLE IF NOT EXISTS chat_settings (
   user_id uuid PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
   notifications_enabled boolean DEFAULT true,
@@ -61,52 +61,43 @@ ALTER TABLE ai_completions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_typing ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_settings ENABLE ROW LEVEL SECURITY;
 
--- Create policies with duplicate checks
-DO $$ BEGIN
-  DROP POLICY IF EXISTS "Users can manage own voice prints" ON voice_prints;
-  CREATE POLICY "Users can manage own voice prints"
-    ON voice_prints FOR ALL
-    TO authenticated
-    USING (user_id = auth.uid())
-    WITH CHECK (user_id = auth.uid());
-EXCEPTION
-  WHEN undefined_object THEN NULL;
+-- Drop existing policies if they exist
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "Users can manage own voice prints" ON voice_prints;
+    DROP POLICY IF EXISTS "Users can manage own AI completions" ON ai_completions;
+    DROP POLICY IF EXISTS "Users can manage typing status" ON chat_typing;
+    DROP POLICY IF EXISTS "Users can manage own settings" ON chat_settings;
+EXCEPTION 
+    WHEN undefined_object THEN null;
 END $$;
 
-DO $$ BEGIN
-  DROP POLICY IF EXISTS "Users can manage own AI completions" ON ai_completions;
-  CREATE POLICY "Users can manage own AI completions"
-    ON ai_completions FOR ALL
-    TO authenticated
-    USING (user_id = auth.uid())
-    WITH CHECK (user_id = auth.uid());
-EXCEPTION
-  WHEN undefined_object THEN NULL;
-END $$;
+-- Create new policies
+CREATE POLICY "Users can manage own voice prints"
+  ON voice_prints FOR ALL
+  TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
-DO $$ BEGIN
-  DROP POLICY IF EXISTS "Users can manage typing status" ON chat_typing;
-  CREATE POLICY "Users can manage typing status"
-    ON chat_typing FOR ALL
-    TO authenticated
-    USING (user_id = auth.uid())
-    WITH CHECK (user_id = auth.uid());
-EXCEPTION
-  WHEN undefined_object THEN NULL;
-END $$;
+CREATE POLICY "Users can manage own AI completions"
+  ON ai_completions FOR ALL
+  TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
-DO $$ BEGIN
-  DROP POLICY IF EXISTS "Users can manage own settings" ON chat_settings;
-  CREATE POLICY "Users can manage own settings"
-    ON chat_settings FOR ALL
-    TO authenticated
-    USING (user_id = auth.uid())
-    WITH CHECK (user_id = auth.uid());
-EXCEPTION
-  WHEN undefined_object THEN NULL;
-END $$;
+CREATE POLICY "Users can manage typing status"
+  ON chat_typing FOR ALL
+  TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
--- Create trigger to clean up old typing status
+CREATE POLICY "Users can manage own settings"
+  ON chat_settings FOR ALL
+  TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+-- Create or replace cleanup function
 CREATE OR REPLACE FUNCTION cleanup_typing_status()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -116,21 +107,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DO $$ BEGIN
-  DROP TRIGGER IF EXISTS cleanup_old_typing_status ON chat_typing;
-  CREATE TRIGGER cleanup_old_typing_status
-    AFTER INSERT OR UPDATE ON chat_typing
-    FOR EACH STATEMENT
-    EXECUTE FUNCTION cleanup_typing_status();
-EXCEPTION
-  WHEN undefined_object THEN NULL;
-END $$;
+-- Drop existing trigger if it exists
+DROP TRIGGER IF EXISTS cleanup_old_typing_status ON chat_typing;
 
--- Create unique constraints
-DO $$ BEGIN
-  DROP INDEX IF EXISTS chat_typing_user_id_session_id_key;
-  CREATE UNIQUE INDEX chat_typing_user_id_session_id_key 
+-- Create new trigger
+CREATE TRIGGER cleanup_old_typing_status
+  AFTER INSERT OR UPDATE ON chat_typing
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION cleanup_typing_status();
+
+-- Create unique index if it doesn't exist
+DO $$ 
+BEGIN
+    CREATE UNIQUE INDEX IF NOT EXISTS chat_typing_user_id_session_id_key 
     ON chat_typing(user_id, session_id);
-EXCEPTION
-  WHEN duplicate_table THEN NULL;
+EXCEPTION 
+    WHEN duplicate_table THEN null;
 END $$;
