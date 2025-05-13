@@ -1,0 +1,3 @@
+"""
+Task Manager package initialization
+"""
