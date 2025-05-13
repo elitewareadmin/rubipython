@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
+import { Session } from '@supabase/supabase-js';
 import { PhotoIcon, PaperClipIcon, PaperAirplaneIcon, FaceSmileIcon } from '@heroicons/react/24/outline';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -40,7 +41,7 @@ export default function Chat() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -50,7 +51,6 @@ export default function Chat() {
       }
     });
 
-    // Subscribe to new messages, reactions, and typing status
     const channel = supabase
       .channel('chat')
       .on('presence', { event: 'sync' }, () => {
@@ -78,7 +78,6 @@ export default function Chat() {
       })
       .subscribe();
 
-    // Track user typing
     channel.track({ user_id: session?.user?.id, isTyping: false });
 
     fetchMessages();
@@ -181,7 +180,7 @@ export default function Chat() {
   const handleFileUpload = async (file: File) => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${session.user.id}/${fileName}`;
+    const filePath = `${session?.user.id}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('chat-files')
@@ -196,7 +195,7 @@ export default function Chat() {
       .from('chat-files')
       .getPublicUrl(filePath);
 
-    await handleSubmit(null, publicUrl, file.type);
+    await handleSubmit(undefined, publicUrl, file.type);
   };
 
   const handleSubmit = async (e?: React.FormEvent, fileUrl?: string, fileType?: string) => {
@@ -227,7 +226,6 @@ export default function Chat() {
 
   return (
     <div className="flex h-[calc(100vh-200px)]">
-      {/* Rooms sidebar */}
       <div className="w-64 bg-gray-100 dark:bg-gray-800 p-4 border-r border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Rooms</h2>
         <div className="space-y-2">
@@ -247,9 +245,7 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Main chat area */}
       <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
-        {/* Search bar */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <input
             type="text"
@@ -260,7 +256,6 @@ export default function Chat() {
           />
         </div>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4">
           {messages.map((message) => (
             <div
@@ -348,7 +343,6 @@ export default function Chat() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Typing indicator */}
         {typingUsers.length > 0 && (
           <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
             {typingUsers
@@ -358,7 +352,6 @@ export default function Chat() {
           </div>
         )}
 
-        {/* Message input */}
         <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
             <button
